@@ -1,6 +1,6 @@
 [package]
 name = "serde-stream-formats"
-version = "0.1.0"
+version = "0.1.1"
 description = "Bounded-memory streaming encode and incremental decode for Serde wire formats (JSON, YAML, MessagePack, Postcard) with typed failures"
 authors = ["Jacobus Geluk <jacobus.geluk@dataroad.com>"]
 edition = "2024"
