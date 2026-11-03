@@ -9,6 +9,19 @@ import unittest
 
 
 class CommitPolicyTests(unittest.TestCase):
+    def test_pull_request_validation_does_not_require_writer_secrets(self):
+        workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/ci.yml").read_text()
+        writer = workflow.split("        id: writer\n", 1)[1].split("      - uses:", 1)[0]
+        self.assertIn("        if: github.event_name != 'pull_request'\n", writer)
+
+    def test_pr_preparation_uses_read_token_and_main_keeps_writer(self):
+        workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/ci.yml").read_text()
+        preparation = workflow.split("        id: release\n", 1)[1].split("\n  test:", 1)[0]
+        self.assertIn(
+            "token: ${{ github.event_name == 'pull_request' && github.token || steps.writer.outputs.token }}",
+            preparation,
+        )
+
     def test_ci_and_hooks_share_pinned_toolchains(self):
         root = Path(__file__).resolve().parents[1]
         self.assertRegex((root / "rustfmt-toolchain").read_text().strip(), r"^nightly-\d{4}-\d{2}-\d{2}$")
