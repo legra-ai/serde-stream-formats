@@ -30,6 +30,7 @@ jobs:
       # per run and scoped to this repository only.
       - uses: actions/create-github-app-token@v3
         id: writer
+        if: github.event_name != 'pull_request'
         with:
           app-id: ${{ secrets.RELEASE_WRITER_APP_ID }}
           private-key: ${{ secrets.RELEASE_WRITER_APP_KEY }}
@@ -38,7 +39,7 @@ jobs:
       - uses: legra-ai/github-actions/.github/actions/prepare-cargo-release@main
         id: release
         with:
-          token: ${{ steps.writer.outputs.token }}
+          token: ${{ github.event_name == 'pull_request' && github.token || steps.writer.outputs.token }}
 
   test:
     needs: prepare
