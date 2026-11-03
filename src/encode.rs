@@ -1,6 +1,7 @@
 //! Bounded streaming encoding of Serde values.
 
 use std::fmt;
+use std::future::Future;
 use std::io::{
     self,
     Write as IoWrite,
@@ -14,6 +15,7 @@ use std::task::{
 use bytes::Bytes;
 use serde::Serialize;
 use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 use tokio_stream::Stream;
 use tokio_stream::wrappers::ReceiverStream;
 
@@ -123,7 +125,7 @@ impl EncodeFormat {
         T: Serialize + Send + 'static,
     {
         let (sender, receiver) = mpsc::channel(SERIALIZER_CHANNEL_CAPACITY);
-        tokio::task::spawn_blocking(move || {
+        let worker = tokio::task::spawn_blocking(move || {
             let mut writer = ChannelWriter { sender };
             let result = match self {
                 Self::Json => {
@@ -143,13 +145,12 @@ impl EncodeFormat {
                     .map(|_| ())
                     .map_err(|error| error.to_string()),
             };
-            if let Err(error) = result {
-                let format_error = self.unencodable(error);
-                let _ = writer.sender.blocking_send(Err(format_error));
-            }
+            result.map_err(|error| self.unencodable(error))
         });
         EncodedStream {
             inner: ReceiverStream::new(receiver),
+            worker: Some(worker),
+            format: self,
         }
     }
 
@@ -165,13 +166,31 @@ impl EncodeFormat {
 #[derive(Debug)]
 pub struct EncodedStream {
     inner: ReceiverStream<Result<Bytes, FormatError>>,
+    worker: Option<JoinHandle<Result<(), FormatError>>>,
+    format: EncodeFormat,
 }
 
 impl Stream for EncodedStream {
     type Item = Result<Bytes, FormatError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        Pin::new(&mut self.inner).poll_next(cx)
+        match Pin::new(&mut self.inner).poll_next(cx) {
+            Poll::Ready(None) => {}
+            item => return item,
+        }
+        let Some(worker) = self.worker.as_mut() else {
+            return Poll::Ready(None);
+        };
+        let result = match Pin::new(worker).poll(cx) {
+            Poll::Pending => return Poll::Pending,
+            Poll::Ready(result) => result,
+        };
+        self.worker = None;
+        match result {
+            Ok(Ok(())) => Poll::Ready(None),
+            Ok(Err(error)) => Poll::Ready(Some(Err(error))),
+            Err(error) => Poll::Ready(Some(Err(self.format.unencodable(error)))),
+        }
     }
 }
 
