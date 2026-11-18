@@ -146,7 +146,7 @@ jobs:
           target_commitish: ${{ needs.prepare.outputs.revision }}
           body_path: CHANGELOG_RELEASE.md
           draft: true
-      - uses: legra-ai/github-actions/.github/actions/publish-tested-crate@8cdaad621c581c2f59e5eb0dfafc05f635c12c0a
+      - uses: legra-ai/github-actions/.github/actions/publish-tested-crate@674c637085eaba8f16e5413ad7f6420bd9964891
         with:
           crate: serde-stream-formats
           version: ${{ needs.prepare.outputs.version }}
