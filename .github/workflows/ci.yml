@@ -132,7 +132,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ needs.prepare.outputs.revision }}
       - uses: actions-rust-lang/setup-rust-toolchain@v2
-      - uses: legra-ai/github-actions/.github/actions/tag-tested-release@674c637085eaba8f16e5413ad7f6420bd9964891
+      - uses: legra-ai/github-actions/.github/actions/tag-tested-release@b3cebd0e56098fb20bbf8bc2d5770b82d9020ddd
         with:
           version: ${{ needs.prepare.outputs.version }}
           revision: ${{ needs.prepare.outputs.revision }}
