@@ -297,7 +297,7 @@ dependencies = [
 
 [[package]]
 name = "serde-stream-formats"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "bytes",
  "postcard",
